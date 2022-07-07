@@ -49,9 +49,20 @@ function runLevel(level, Display) {
 }
 
 async function runGame(plans, Display) {
-  for (let level = 0; level < plans.length;) {
-    let status = await runLevel(new Level(plans[level]), Display);
-    if (status == "won") level++;
+  let lives = 3;
+  while (true) {
+    for (let level = 0; level < plans.length && lives > 0;) {
+      console.log(`you've got ${lives} lives`);
+      let status = await runLevel(new Level(plans[level]), Display);
+      if (status == "lost") lives--;
+      if (status == "won") level++;
+    }
+    if (lives === 0) {
+      console.log("game over, the game is restarting");
+      lives = 3;
+    } else {
+      break;
+    }
   }
   console.log("you've won, parabains!");
 }
