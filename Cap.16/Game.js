@@ -1,24 +1,29 @@
 function trackKeys(keys) {
-  let down = Object.create(null);
+  const listener = { down: Object.create(null) };
   function track(event) {
     if (keys.includes(event.key)) {
-      down[event.key] = event.type == "keydown";
+      listener.down[event.key] = event.type == "keydown";
       event.preventDefault();
     }
   }
   window.addEventListener("keydown", track);
   window.addEventListener("keyup", track);
-  return down;
+
+  listener.clear = () => {
+    window.removeEventListener("keydown", track);
+    window.removeEventListener("keyup", track);
+  };
+  return listener;
 }
 
-const arrowKeys = trackKeys(["ArrowLeft", "ArrowRight", "ArrowUp"]);
+// const arrowKeys = trackKeys(["ArrowLeft", "ArrowRight", "ArrowUp"]);
 
 function runAnimation(frameFunc) {
   let lastTime = null;
-  function frame(time) {
+  async function frame(time) {
     if (lastTime != null) {
       let timeStep = Math.min(time - lastTime, 100) / 1000;
-      if (frameFunc(timeStep) === false) return;
+      if (await frameFunc(timeStep) === false) return;
     }
     lastTime = time;
     requestAnimationFrame(frame);
@@ -29,23 +34,65 @@ function runAnimation(frameFunc) {
 function runLevel(level, Display) {
   let display = new Display(document.body, level);
   let state = State.start(level);
-  let ending = 1;
+  const ending = [1];
+
+  const keys = trackKeys((["ArrowLeft", "ArrowRight", "ArrowUp"]));
+  let pause = listenPause("s", [() => ending[0] === 1]);
+
   return new Promise(resolve => {
-    runAnimation(time => {
-      state = state.update(time, arrowKeys);
+    runAnimation(async time => {
+      state = state.update(time, keys.down);
       display.syncState(state);
+      if (pause.resumed instanceof Promise) {
+        await pause.resumed;
+      }
       if (state.status == "playing") {
         return true;
-      } else if (ending > 0) {
-        ending -= time;
+      } else if (ending[0] > 0) {
+        ending[0] -= time;
         return true;
       } else {
         display.clear();
+        pause.clear();
+        keys.clear();
         resolve(state.status);
         return false;
       }
     });
   });
+}
+
+function listenPause(key = "p", pauseTests = [], resumeTests = []) {
+  const keyL = key.toLocaleLowerCase(), keyU = key.toUpperCase();
+  const listener = { resumed: null, clear: null };
+
+  function pauseListener(event) {
+    if ((event.key == keyL || event.key == keyU) && (!pauseTests || pauseTests.every(t => t()))) {
+      listener.resumed = new Promise((resume) => {
+        function resumeListener(event) {
+          if ((event.key == keyL || event.key == keyU) && (!resumeTests || resumeTests.every(t => t()))) {
+            resume(null);
+            window.addEventListener("keyup", pauseListener);
+            window.removeEventListener("keyup", resumeListener);
+            console.log("resumed");
+          }
+        }
+
+        window.addEventListener("keyup", resumeListener);
+        listener.clear = () => {
+          window.removeEventListener("keyup", resumeListener);
+          window.removeEventListener("keyup", pauseListener);
+        }
+      });
+
+      window.removeEventListener("keyup", pauseListener);
+      console.log("paused");
+    }
+  }
+  listener.clear = () => { window.removeEventListener("keyup", pauseListener); }
+
+  window.addEventListener("keyup", pauseListener);
+  return listener;
 }
 
 async function runGame(plans, Display) {
