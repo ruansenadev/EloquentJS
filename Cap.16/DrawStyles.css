@@ -15,25 +15,28 @@
 }
 /* Actors */
 .actor {
-  position: absolute;
+	position: absolute;
 }
 .coin {
-  background: rgb(241, 229, 89);
+	background: rgb(241, 229, 89);
 }
 .player {
-  background: rgb(64, 64, 64);
+	background: rgb(64, 64, 64);
+}
+.monster {
+	background: purple;
 }
 /* Status modifiers */
 .lost .player {
-  background: rgb(160, 64, 64);
+	background: rgb(160, 64, 64);
 }
 .won .player {
-  box-shadow: -4px -7px 8px white, 4px -7px 8px white;
+	box-shadow: -4px -7px 8px white, 4px -7px 8px white;
 }
 /* Display */
 .game {
-  position: relative;
-  max-width: 600px;
-  max-height: 450px;
-  overflow: hidden;
+	position: relative;
+	max-width: 600px;
+	max-height: 450px;
+	overflow: hidden;
 }

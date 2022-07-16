@@ -106,7 +106,7 @@ Player.prototype.size = new Vec(0.8, 1.5);
 const playerXSpeed = 7;
 const gravity = 30;
 const jumpSpeed = 17;
-Player.prototype.update = function(time, state, keys) {
+Player.prototype.update = function (time, state, keys) {
   let xSpeed = 0;
   if (keys.ArrowLeft) xSpeed -= playerXSpeed;
   if (keys.ArrowRight) xSpeed += playerXSpeed;
@@ -193,19 +193,81 @@ Coin.prototype.update = function (time) {
   return new Coin(this.basePos.plus(new Vec(0, wobblePos)), this.basePos, wobble);
 }
 
-const levelChars = {
-  ".": "empty", "#": "wall", "+": "lava",
-  "@": Player, "o": Coin,
-  "=": Lava, "|": Lava, "v": Lava
+class Monster {
+  constructor(pos, speed) {
+    this.pos = pos;
+    this.speed = speed;
+  }
+
+  static create(pos) {
+    return new Monster(pos.plus(new Vec(0, -1)), new Vec(-3, 0));
+  }
+  get type() { return "monster"; }
+}
+Monster.prototype.size = new Vec(1.2, 2);
+
+Monster.prototype.update = function (time, state) {
+  let newPos = this.pos.plus(this.speed.times(time));
+  // the block aside is a wall or under its boundbox has no wall
+  // it must trunc integer part when going left to avoid stuck when draw in a right edge
+  if (!state.level.touches(newPos, this.size, "wall") &&
+    !state.level.touches(newPos.plus(new Vec(0, this.size.y)), new Vec(this.speed.x < 0 ? Math.trunc(this.size.x) : this.size.x, 1), "empty")
+  ) {
+    return new Monster(newPos, this.speed);
+  } else {
+
+    return new Monster(this.pos, this.speed.times(-1));
+  }
+}
+Monster.prototype.collide = function (state) {
+  let player = state.player;
+  let status = state.status;
+  let filtered = state.actors;
+
+  if (collideFromTop(player, this)) {
+    filtered = state.actors.filter(a => a != this);
+  } else {
+    status = "lost";
+  }
+
+  return new State(state.level, filtered, status);
 }
 
-let simpleLevelPlan = `
-......................
-..#................#..
-..#..............=.#..
-..#.........o.o....#..
-..#.@......#####...#..
-..#####............#..
-......#++++++++++++#..
-......##############..
-......................`;
+function collideFromTop(top, under) {
+  if (overlapingFromTop) {
+    let portionOverlapingPos = new Vec(
+      top.pos.x > under.pos.x ? top.pos.x : under.pos.x,
+      under.pos.y
+    );
+    let portionOverlapingSize = new Vec(
+      (under.pos.x + under.size.x) - portionOverlapingPos.x,
+      (top.pos.y + top.size.y) - portionOverlapingPos.y
+    );
+
+    // only check it's top square area
+    if (portionOverlapingSize.y >= under.size.x) {
+      return false;
+    }
+
+    // suppose an uncalculable area what cannot be determined by the time step if it was from top or side
+    let unsafeAreaLength = ((under.size.x / 2) / 2);
+    if (unsafeAreaLength >= portionOverlapingSize.x && unsafeAreaLength >= portionOverlapingSize.y) {
+      return true;
+    }
+
+    // the overlaped top triangle area is larger than side triangle
+    return portionOverlapingSize.x > portionOverlapingSize.y;
+
+  }
+  return false;
+}
+function overlapingFromTop(top, under) {
+  return top.pos.y + top.size.y > under.pos.y &&
+    top.pos.y < under.pos.y;
+}
+
+const levelChars = {
+  ".": "empty", "#": "wall", "+": "lava",
+  "@": Player, "o": Coin, "M": Monster,
+  "=": Lava, "|": Lava, "v": Lava,
+}
