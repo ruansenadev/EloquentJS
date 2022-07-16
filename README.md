@@ -1,2 +1,3 @@
-# EloquentJS
-eloquent js 3rd solutions
+### EloquentJS
+
+- [Project: A Platform Game](https://ruansenadev.github.io/EloquentJS/16)

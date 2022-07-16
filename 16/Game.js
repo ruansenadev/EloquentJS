@@ -97,6 +97,7 @@ function listenPause(key = "p", pauseTests = [], resumeTests = []) {
 
 async function runGame(plans, Display) {
   let lives = 3;
+  console.log("press S to pause");
   while (true) {
     for (let level = 0; level < plans.length && lives > 0;) {
       console.log(`you've got ${lives} lives`);
